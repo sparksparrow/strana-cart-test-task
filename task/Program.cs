@@ -7,11 +7,9 @@ using task.Services;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Logging.AddConsole(options =>
-{
-	options.FormatterName = CustomConsoleFormatter.FormatterName;
-})
-.AddConsoleFormatter<CustomConsoleFormatter, CustomConsoleFormatterOptions>();
+builder.Logging
+	.AddConsole(options => options.FormatterName = StructuredLoggingConsoleFormatter.FormatterName)
+	.AddConsoleFormatter<StructuredLoggingConsoleFormatter, StructuredLoggingConsoleFormatterOptions>();
 
 var configuration = new ConfigurationBuilder()
 	.SetBasePath(Directory.GetCurrentDirectory())

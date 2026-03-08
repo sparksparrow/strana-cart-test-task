@@ -2,10 +2,10 @@
 
 namespace task.Logging;
 
-public sealed class CustomConsoleFormatterOptions : ConsoleFormatterOptions
+public sealed class StructuredLoggingConsoleFormatterOptions : ConsoleFormatterOptions
 {
 	/// <summary>
-	/// Формат времени, по умолчанию: yyyy-MM-dd HH:mm:ss
+	/// Формат времени
 	/// </summary>
 	public new string TimestampFormat { get; set; } = "yyyy-MM-dd HH:mm:ss";
 }
