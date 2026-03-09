@@ -22,6 +22,7 @@ public class TerminalImportService(
 {
 	private const string searchString = "дом № ";
 
+	// JsonSerializer с case-insensitive (System.Text.Json)
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
 		PropertyNameCaseInsensitive = true
@@ -33,49 +34,45 @@ public class TerminalImportService(
 
 		try
 		{
-			// 1. Load JSON
+			// 1. Загружаем терминалы
 			var offices = await LoadFromJsonAsync(cancellationToken);
 			logger.LogInformation("Загружено {Count} терминалов из JSON", offices.Count);
 
-			// 2. Delete existing records
 			await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-			try
-			{
-				var oldCount = await dbContext.Offices.CountAsync(cancellationToken);
-				await dbContext.Offices.ExecuteDeleteAsync(cancellationToken);
-				logger.LogInformation("Удалено {OldCount} старых записей", oldCount);
 
-				// 3. Bulk insert new terminals
-				await dbContext.Offices.AddRangeAsync(offices, cancellationToken);
-				await dbContext.SaveChangesAsync(cancellationToken);
-				await transaction.CommitAsync(cancellationToken);
-				logger.LogInformation("Сохранено {NewCount} новых терминалов", offices.Count);
-			}
-			catch (Exception ex)
-			{
-				await transaction.RollbackAsync(cancellationToken);
-				logger.LogError(ex, "Ошибка при обновлении терминалов, транзакция откачена");
-				throw;
-			}
+			// 2. Удаляем существующие терминалы
+			var deletedCount = await dbContext.Offices.ExecuteDeleteAsync(cancellationToken);
+			logger.LogInformation("Удалено {DeletedCount} старых записей", deletedCount);
+
+			// 3. Вставляем новые терминалы
+			await dbContext.Offices.AddRangeAsync(offices, cancellationToken);
+			await dbContext.SaveChangesAsync(cancellationToken);
+
+			await transaction.CommitAsync(cancellationToken);
+			logger.LogInformation("Сохранено {NewCount} новых терминалов", offices.Count);
 		}
-		catch (OperationCanceledException)
+		catch (OperationCanceledException ex)
 		{
-			logger.LogWarning("Импорт терминалов был отменён");
+			logger.LogWarning(ex, "Импорт терминалов был отменён");
+
 			throw;
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Ошибка импорта: {Exception}", ex.Message);
+			logger.LogError(ex, "Ошибка импорта");
+
+			throw;
 		}
 	}
 
 	private async Task<List<Office>> LoadFromJsonAsync(CancellationToken cancellationToken)
 	{
 		if (!File.Exists(appSettings.TerminalsFilePath))
+		{
 			throw new FileNotFoundException($"Файл терминалов не найден: {appSettings.TerminalsFilePath}");
+		}
 
 		await using var stream = File.OpenRead(appSettings.TerminalsFilePath);
-
 		var dtos = await JsonSerializer.DeserializeAsync<TerminalJsonRootDto>(stream, JsonOptions, cancellationToken);
 
 		if (dtos is null || dtos.City?.Count == 0)
@@ -99,12 +96,13 @@ public class TerminalImportService(
 		{
 			Id = int.Parse(t.Id),
 			Code = cityDto.Code,
+			// думал брал cityDto.Code, но в ТЗ CityCode указан как Int, поэтому взял cityDto.CityId, который тоже int
 			CityCode = cityDto.CityId,
 			// Не нашел Uuid в файле terminals.json, поэтому взял terminal -> addressCode -> street_code
 			Uuid = t.AddressCode?.StreetCode,
-			// Не нашел Uuid в файле terminals.json, поэтому взял Цифровой код России по ISO
+			// Не нашел CountryCode в файле terminals.json, поэтому взял Цифровой код России по ISO
 			CountryCode = "643",
-			// Не совсем понял в каком формате должен храниться WorkTime, поэтому сохранил как JSON ключ worktables
+			// Не совсем понял в каком формате должен храниться WorkTime, поэтому сохранил как JSON - ключ worktables
 			WorkTime = JsonSerializer.Serialize(t.Worktables, JsonOptions),
 			Type = GetOfficeType(t),
 			Coordinates = new Coordinates
@@ -113,18 +111,18 @@ public class TerminalImportService(
 				Longitude = double.Parse(t.Longitude, CultureInfo.InvariantCulture)
 			},
 			Address = t.Address is null
-			? new Address()
-			: new Address
-			{
-				FullAddress = t.FullAddress,
-				City = t.Name,
-				Street = t.Address,
-				House = GetHouse(t),
-				PostalCode = GetPostalCode(t)
-			},
+				? new Address()
+				: new Address
+				{
+					FullAddress = t.FullAddress,
+					City = t.Name,
+					Street = t.Address,
+					House = GetHouse(t),
+					PostalCode = GetPostalCode(t)
+				},
 			Phones = t.Phones?
-			.Select(p => new Phone { PhoneNumber = p.Number, Additional = GetAdditional(p) })
-			.ToList() ?? []
+				.Select(p => new Phone { PhoneNumber = p.Number, Additional = GetAdditional(p) })
+				.ToList() ?? []
 		});
 	}
 

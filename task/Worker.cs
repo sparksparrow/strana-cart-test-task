@@ -19,16 +19,17 @@ public class Worker(TimeProvider timeProvider, IServiceProvider serviceProvider)
 		{
 			await using var scope = serviceProvider.CreateAsyncScope();
 			var logger = scope.ServiceProvider.GetRequiredService<ILogger<Worker>>();
+			var importService = scope.ServiceProvider.GetRequiredService<ITerminalImportService>();
 
 			try
 			{
-				// Ожидаем следующего запуска в 02:00 по Москве
+				// Ожидаем следующего запуска в 02:00 по Москве (23:00 по UTC предыдущего дня)
 				await Task.Delay(
 					GetDelayUntilNextRun(),
 					timeProvider,
 					stoppingToken);
 
-				await RunImportAsync(scope, stoppingToken);
+				await importService.ImportAsync(stoppingToken);
 			}
 			catch (OperationCanceledException ex)
 			{
@@ -36,27 +37,10 @@ public class Worker(TimeProvider timeProvider, IServiceProvider serviceProvider)
 
 				throw;
 			}
-		}
-	}
-
-	private async Task RunImportAsync(AsyncServiceScope scope, CancellationToken stoppingToken)
-	{
-		var logger = scope.ServiceProvider.GetRequiredService<ILogger<Worker>>();
-
-		try
-		{
-			var importService = scope.ServiceProvider.GetRequiredService<ITerminalImportService>();
-			await importService.ImportAsync(stoppingToken);
-		}
-		catch (OperationCanceledException ex)
-		{
-			logger.LogWarning(ex, "Импорт прерван: сервис остановлен");
-
-			throw;
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Необработанная ошибка в {BackgroundServiceName}: {ExceptionMessage}", nameof(Worker), ex.Message);
+			catch (Exception ex)
+			{
+				logger.LogError(ex, "Необработанная ошибка в {BackgroundServiceName}: {ExceptionMessage}", nameof(Worker), ex.Message);
+			}
 		}
 	}
 
@@ -72,6 +56,7 @@ public class Worker(TimeProvider timeProvider, IServiceProvider serviceProvider)
 
 		// Конвертируем обратно в UTC для корректного расчёта задержки
 		var nextRunUtc = TimeZoneInfo.ConvertTimeToUtc(nextRun, MoscowTz);
+
 		return nextRunUtc - nowUtc;
 	}
 }
