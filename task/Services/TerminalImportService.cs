@@ -75,7 +75,7 @@ public class TerminalImportService(
 		await using var stream = File.OpenRead(appSettings.TerminalsFilePath);
 		var dtos = await JsonSerializer.DeserializeAsync<TerminalJsonRootDto>(stream, JsonOptions, cancellationToken);
 
-		if (dtos is null || dtos.City?.Count == 0)
+		if (dtos is null || dtos.City is null)
 		{
 			throw new InvalidDataException("Файл терминалов пуст или имеет неверный формат");
 		}
