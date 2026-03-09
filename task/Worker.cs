@@ -2,25 +2,16 @@
 
 namespace task;
 
-public class Worker(TimeProvider timeProvider, IServiceProvider serviceProvider) : BackgroundService
+public class Worker(TimeProvider timeProvider, IServiceProvider serviceProvider, ILogger<Worker> logger) : BackgroundService
 {
-	private static readonly TimeZoneInfo MoscowTz =
-		TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow");
+	private static readonly TimeZoneInfo MoscowTz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow");
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		using (var scope = serviceProvider.CreateScope())
-		{
-			var logger = scope.ServiceProvider.GetRequiredService<ILogger<Worker>>();
-			logger.LogInformation("Фоновая задача {BackgroundServiceName} запущена. Ожидание следующего запуска в 02:00 MSK...", nameof(Worker));
-		}
+		logger.LogInformation("Фоновая задача {BackgroundServiceName} запущена", nameof(Worker));
 
 		while (!stoppingToken.IsCancellationRequested)
 		{
-			await using var scope = serviceProvider.CreateAsyncScope();
-			var logger = scope.ServiceProvider.GetRequiredService<ILogger<Worker>>();
-			var importService = scope.ServiceProvider.GetRequiredService<ITerminalImportService>();
-
 			try
 			{
 				// Ожидаем следующего запуска в 02:00 по Москве (23:00 по UTC предыдущего дня)
@@ -28,7 +19,9 @@ public class Worker(TimeProvider timeProvider, IServiceProvider serviceProvider)
 					GetDelayUntilNextRun(),
 					timeProvider,
 					stoppingToken);
-
+					
+				await using var scope = serviceProvider.CreateAsyncScope();
+				var importService = scope.ServiceProvider.GetRequiredService<ITerminalImportService>();
 				await importService.ImportAsync(stoppingToken);
 			}
 			catch (OperationCanceledException ex)
@@ -44,9 +37,9 @@ public class Worker(TimeProvider timeProvider, IServiceProvider serviceProvider)
 		}
 	}
 
-	private static TimeSpan GetDelayUntilNextRun()
+	private TimeSpan GetDelayUntilNextRun()
 	{
-		var nowUtc = DateTime.UtcNow;
+		var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
 		var nowMoscow = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, MoscowTz);
 
 		// Следующий запуск в 02:00 по Москве
