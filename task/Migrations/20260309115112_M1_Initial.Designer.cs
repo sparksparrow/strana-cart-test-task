@@ -11,8 +11,8 @@ using task.DbSql;
 namespace task.Migrations
 {
     [DbContext(typeof(DellinDictionaryDbContext))]
-    [Migration("20260307223805_m1_initial")]
-    partial class m1_initial
+    [Migration("20260309115112_M1_Initial")]
+    partial class M1_Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -57,6 +57,8 @@ namespace task.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("City");
+
                     b.HasIndex("OfficeId")
                         .IsUnique();
 
@@ -91,10 +93,7 @@ namespace task.Migrations
             modelBuilder.Entity("task.Entities.Office", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("CityCode")
                         .HasColumnType("integer");
@@ -109,7 +108,8 @@ namespace task.Migrations
                         .HasColumnType("character varying(3)");
 
                     b.Property<string>("Type")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("Uuid")
                         .HasMaxLength(50)

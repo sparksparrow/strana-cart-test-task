@@ -9,7 +9,7 @@ public class OfficeConfiguration : IEntityTypeConfiguration<Office>
 	public void Configure(EntityTypeBuilder<Office> builder)
 	{
 		builder.HasKey(o => o.Id);
-		builder.Property(o => o.Id).ValueGeneratedOnAdd().IsRequired();
+		builder.Property(o => o.Id).ValueGeneratedNever().IsRequired();
 
 		builder.Property(o => o.Code)
 			.HasMaxLength(50);
@@ -21,7 +21,8 @@ public class OfficeConfiguration : IEntityTypeConfiguration<Office>
 			.HasMaxLength(50);
 
 		builder.Property(o => o.Type)
-			.HasConversion<string?>();
+			.HasConversion<string>()
+			.HasMaxLength(50);
 
 		builder.Property(o => o.CountryCode)
 			.HasMaxLength(3)

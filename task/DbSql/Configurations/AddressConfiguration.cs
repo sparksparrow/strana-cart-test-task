@@ -16,6 +16,8 @@ namespace task.DbSql.Configurations
 			builder.Property(a => a.House).HasMaxLength(20);
 			builder.Property(a => a.PostalCode).HasMaxLength(20);
 			builder.Property(a => a.OfficeId).IsRequired();
+
+			builder.HasIndex(a => a.City);
 		}
 	}
 }

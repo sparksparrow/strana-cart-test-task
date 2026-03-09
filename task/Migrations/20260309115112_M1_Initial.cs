@@ -6,7 +6,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace task.Migrations
 {
     /// <inheritdoc />
-    public partial class m1_initial : Migration
+    public partial class M1_Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,12 +15,11 @@ namespace task.Migrations
                 name: "Offices",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<int>(type: "integer", nullable: false),
                     Code = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     CityCode = table.Column<int>(type: "integer", nullable: false),
                     Uuid = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    Type = table.Column<string>(type: "text", nullable: true),
+                    Type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     CountryCode = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
                     WorkTime = table.Column<string>(type: "jsonb", nullable: false)
                 },
@@ -94,6 +93,11 @@ namespace task.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Address_City",
+                table: "Address",
+                column: "City");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Address_OfficeId",
