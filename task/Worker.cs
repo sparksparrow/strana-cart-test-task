@@ -52,7 +52,9 @@ public class Worker(TimeProvider timeProvider, IServiceProvider serviceProvider)
 		// Следующий запуск в 02:00 по Москве
 		var nextRun = nowMoscow.Date.AddHours(2);
 		if (nowMoscow >= nextRun)
+		{
 			nextRun = nextRun.AddDays(1); // уже прошли — ждём завтра
+		}
 
 		// Конвертируем обратно в UTC для корректного расчёта задержки
 		var nextRunUtc = TimeZoneInfo.ConvertTimeToUtc(nextRun, MoscowTz);
